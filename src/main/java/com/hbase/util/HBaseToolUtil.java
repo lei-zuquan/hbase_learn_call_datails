@@ -113,6 +113,10 @@ public class HBaseToolUtil {
                 int len = columnFamily.length;
                 for (int i = 0; i < len; i++) {
                     HColumnDescriptor family = new HColumnDescriptor(columnFamily[i]);
+                    // 指定保存版本号，默认版本号为：1
+                    family.setMaxVersions(1);
+                    // TTL参数的单位是秒，默认值是Integer.MAX_VALUE，即2^31-1=2 147 483 647 秒，大约68年。使用TTL默认值的数据可以理解为永久保存。
+                    family.setTimeToLive(2147483647); // 单元秒
                     td.addFamily(family);
                 }
                 // 通过分区数得到分区键
