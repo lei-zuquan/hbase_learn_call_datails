@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -102,7 +100,7 @@ public class HBaseToolUtil {
      * @param tableName
      * @param columnFamily
      */
-    public static void createTable(String tableName, int regionCount, String... columnFamily) {
+    public static void createTable(String tableName, int regionCount, int maxVersion, int timeToLive, String... columnFamily) {
         TableName tableNameObj = TableName.valueOf(tableName);
         Admin admin = HbaseConnHelper.getHAdmin();
         try {
@@ -114,9 +112,9 @@ public class HBaseToolUtil {
                 for (int i = 0; i < len; i++) {
                     HColumnDescriptor family = new HColumnDescriptor(columnFamily[i]);
                     // 指定保存版本号，默认版本号为：1
-                    family.setMaxVersions(1);
+                    family.setMaxVersions(maxVersion);
                     // TTL参数的单位是秒，默认值是Integer.MAX_VALUE，即2^31-1=2 147 483 647 秒，大约68年。使用TTL默认值的数据可以理解为永久保存。
-                    family.setTimeToLive(2147483647); // 单元秒
+                    family.setTimeToLive(timeToLive); // 单元秒
                     td.addFamily(family);
                 }
                 // 通过分区数得到分区键
@@ -471,27 +469,29 @@ public class HBaseToolUtil {
 	}
 	
 	/**
-	 *  通过指定startRow、stopRow，获取指定范围的一个数据集
+	 *  通过指定startRow、stopRow，获取指定范围的列族一个数据集
 	 * @param tableName		表名
+	 * @param family		列族名
 	 * @param startRow		起始rowKey
 	 * @param stopRow		结束rowKey
 	 * @return
 	 */
-	public static List<Result> getRows(String tableName,String startRow,String stopRow){
-		
+	public static List<Result> getRows(String tableName, String family, String startRow,String stopRow){
+
 		List<Result> list = null;
 		Table table = HbaseConnHelper.getTable(tableName);
 
 		try {
 			Scan scan = new Scan();
-			scan.setStartRow(startRow.getBytes());
-			scan.setStopRow(stopRow.getBytes());
+			scan.addFamily(Bytes.toBytes(family));
+			scan.setStartRow(Bytes.toBytes(startRow));
+			scan.setStopRow(Bytes.toBytes(stopRow));
 			ResultScanner scanner = table.getScanner(scan);
 			list = new ArrayList<Result>();
 			for (Result rsResult : scanner) {
 				list.add(rsResult);
 			}
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -503,7 +503,21 @@ public class HBaseToolUtil {
 		}
 		return list;
 	}
-	
+
+	public static String getColValue(Result rs, String family, String colName){
+		byte[] bytes = CellUtil.cloneValue(rs.getColumnLatestCell(Bytes.toBytes(family), Bytes.toBytes(colName)));
+		return Bytes.toString(bytes);
+	}
+
+	public static String getColValue(Result rs, byte[] family, String colName){
+		byte[] bytes = CellUtil.cloneValue(rs.getColumnLatestCell(family, Bytes.toBytes(colName)));
+		return Bytes.toString(bytes);
+	}
+	public static String getColValue(Result rs, byte[] family, byte[] colName){
+		byte[] bytes = CellUtil.cloneValue(rs.getColumnLatestCell(family, colName));
+		return Bytes.toString(bytes);
+	}
+
 	
 	public static ResultScanner scanRowByFilterList(String tableName, FilterList filterList){
 		ResultScanner rss = null;
@@ -575,5 +589,21 @@ public class HBaseToolUtil {
 		//delete.addColumn(Bytes.toBytes(cf), Bytes.toBytes(cn)); // 生产环境慎用，它只删除一个版本数据
 		
 		table.delete(delete);
+	}
+
+
+	public static void printRowRecord(Result rs) {
+		String rowKey = Bytes.toString(rs.getRow());
+
+		System.out.println("row key is:" + rowKey);
+		List<Cell> cells = rs.listCells();
+		for (Cell cell : cells) {
+
+			String family = Bytes.toString(CellUtil.cloneFamily(cell));       // new String(CellUtil.cloneFamily(cell), "UTF-8");
+			String qualifier = Bytes.toString(CellUtil.cloneQualifier(cell)); // new String(CellUtil.cloneQualifier(cell),"UTF-8");
+			String value = Bytes.toString(CellUtil.cloneValue(cell));         //new String(CellUtil.cloneValue(cell), "UTF-8");
+			System.out.println(":::::[row:" + rowKey + "],[family:" + family
+					+ "],[qualifier:" + qualifier + "],[value:" + value + "]");
+		}
 	}
 }
