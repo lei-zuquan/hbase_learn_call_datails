@@ -2,17 +2,10 @@ package com.hbase.util;
 
 //package com.wy.data.emaildata.util;
 
-import org.apache.commons.io.FileUtils;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
+import java.util.zip.*;
 
 public class ZipUtils {
 

@@ -58,4 +58,17 @@ public class PhoneUtils {
     }
 
 
+    /**
+     * @方法名：${enclosing_method}
+     * @方法描述: ${tags}
+     * @修改描述:
+     * @版本：1.0
+     * @创建人：${user}
+     * @创建时间：${date} ${time}
+     * @修改人：${user}
+     * @修改时间：${date} ${time}
+     */
+    public static String getCallType33(){
+        return r.nextInt(2) + "";
+    }
 }
