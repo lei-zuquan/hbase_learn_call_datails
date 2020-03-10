@@ -1,13 +1,13 @@
 package com.hbase.conn;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
+
+import java.io.IOException;
 
 public class HbaseConnHelper {
 
@@ -38,7 +38,7 @@ public class HbaseConnHelper {
 		 * 方式二：
 		 * 		hbase-default.xml,hbase-site.xml
 		 */
-		String zk_list = "node-03.stcn.com,node-01.stcn.com,node-02.stcn.com";
+		String zk_list = "node-03,node-01,node-02";
 		conf.set("hbase.zookeeper.quorum", zk_list);
 		// 设置连接参数:hbase数据库使用的接口
 		conf.set("hbase.zookeeper.property.clientPort", "2181");
