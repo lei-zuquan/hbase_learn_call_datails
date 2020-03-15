@@ -56,7 +56,7 @@ public class HbaseTest {
 //		if (HBaseToolUtil.isExistTable(TABLE_NAME)) {
 //			HBaseToolUtil.deleteTable(TABLE_NAME);
 //		}
-//		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE,COL_FAMILY);
+		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE,COL_FAMILY);
 
 
 		// 插入测试数据，这里不建议使用insertToDB1接口
