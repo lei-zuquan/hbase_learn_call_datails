@@ -38,7 +38,7 @@ public class HbaseConnHelper {
 		 * 方式二：
 		 * 		hbase-default.xml,hbase-site.xml
 		 */
-		String zk_list = "node-03.stcn.com,node-01.stcn.com,node-02.stcn.com";
+		String zk_list = "node-03,node-01,node-02";
 		conf.set("hbase.zookeeper.quorum", zk_list);
 		// 设置连接参数:hbase数据库使用的接口
 		conf.set("hbase.zookeeper.property.clientPort", "2181");

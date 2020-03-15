@@ -229,10 +229,10 @@ public class HbaseTest {
 				String type = PhoneUtils.getCallType();
 			
 				SimpleDateFormat sdf = new SimpleDateFormat(YYYY_MM_DD_HH_MM_SS);
-				// Rowkey：手机号_（Long.max-通话时间)
-				// 18685184797_9223370523683210807
+				// Rowkey：分区号_手机号_（Long.max-通话时间)
+				// 02_18685184797_9223370523683210807
 				// Long.MAX_VALUE(922337^2036854775807) - 1513171565000(20171213212605)
-				// 18685184797_9223370523688018807
+				// 02_18685184797_9223370523688018807
 
 				int regionNum = HBaseToolUtil.genRegionNum(pnum, REGION_COUNT);
 				String rowkey = regionNum + "_" + pnum + "_" + (Long.MAX_VALUE-sdf.parse(datestr).getTime());
