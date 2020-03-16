@@ -13,6 +13,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -21,7 +24,7 @@ public class HbaseTest {
 
 	private final static String YYYY_MM_DD_HH_MM_SS = "yyyyMMddHHmmss";
 	// 表名，一般需要加上“名称空间:表名”
-	private final static String TABLE_NAME = "test";//"my_namespace:test";
+	private final static String TABLE_NAME = "default:test";//"my_namespace:test";
 	// 列族名，尽量短小，最好一个字符；同时备注全称cf
 	private final static String COL_FAMILY = "cf";
 	// 列族cf下的date列名，通话日期
@@ -46,21 +49,21 @@ public class HbaseTest {
 		
 		Date startTime;
 		startTime = new Date();
-		
-		//insertPhoneNumToDB();
-		
-		showSpendTime(startTime);
-		startTime = new Date();
 
 		// 创建表
 //		if (HBaseToolUtil.isExistTable(TABLE_NAME)) {
 //			HBaseToolUtil.deleteTable(TABLE_NAME);
 //		}
-		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE,COL_FAMILY);
+//		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE,COL_FAMILY);
 
 
 		// 插入测试数据，这里不建议使用insertToDB1接口
-		//insertPhoneNumToDB();
+		HBaseToolUtil.truncateTable(TABLE_NAME);
+
+		showSpendTime(startTime);
+		startTime = new Date();
+
+		insertPhoneNumToDB();
 
 		//HBaseToolUtil.getTableRowCount(TABLE_NAME);
 		showSpendTime(startTime);
@@ -100,29 +103,27 @@ public class HbaseTest {
 			System.out.println("rowkey:" + rowKey + " 无数据");
 		}
 
-
-
 		showSpendTime(startTime);
-		startTime = new Date();
-
-		scanPhoneRecord("18695907472", "10", "11");
-
-		showSpendTime(startTime);
-		startTime = new Date();
-
-		System.out.println("============================00");
-
-		scanDBPhoneNumByFilter("18699967612");
-
-		showSpendTime(startTime);
-		startTime = new Date();
-
-
-		//HBaseToolUtil.flush(TABLE_NAME);
+//		startTime = new Date();
+//
+//		scanPhoneRecord("18695907472", "10", "11");
+//
+//		showSpendTime(startTime);
+//		startTime = new Date();
+//
+//		System.out.println("============================00");
+//
+//		scanDBPhoneNumByFilter("18699967612");
+//
+//		showSpendTime(startTime);
+//		startTime = new Date();
+//
+//
+		HBaseToolUtil.flush(TABLE_NAME);
 
 		HbaseConnHelper.closeConnection();
-
-		testRowKeyLength();
+//
+//		testRowKeyLength();
 	}
 	
 	private static void showSpendTime(Date startTime){
@@ -215,10 +216,10 @@ public class HbaseTest {
 		
 		List<Put> puts = new ArrayList<Put>();
 		
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 100; i++) {
 			String pnum = PhoneUtils.getPhoneNum("186");
 			
-			for (int j = 0; j < 4; j++) {
+			for (int j = 0; j < 1; j++) {
 				// 通话号码：17796695196
 				String dnum = PhoneUtils.getPhoneNum("177");
 				// 通话时长：20171213212605   2017年12月13日21时26分05秒
@@ -234,18 +235,22 @@ public class HbaseTest {
 				// Long.MAX_VALUE(922337^2036854775807) - 1513171565000(20171213212605)
 				// 02_18685184797_9223370523688018807
 
+				pnum = HBaseToolUtil.reverseRowkey(pnum);
 				int regionNum = HBaseToolUtil.genRegionNum(pnum, REGION_COUNT);
-				String rowkey = regionNum + "_" + pnum + "_" + (Long.MAX_VALUE-sdf.parse(datestr).getTime());
-				Put put = new Put(rowkey.getBytes());
-				put.addColumn(family, CF1_DNUM.getBytes(), dnum.getBytes());
+				LocalDateTime dateTime = LocalDateTime.parse(datestr, DateTimeFormatter.ofPattern(YYYY_MM_DD_HH_MM_SS));
+				long milli = dateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
+
+				String rowKey = regionNum + "_" + pnum + "_" + (Long.MAX_VALUE - milli);
+				Put put = new Put(rowKey.getBytes());
+				//put.addColumn(family, CF1_DNUM.getBytes(), dnum.getBytes());
 				put.addColumn(family, CF1_DATE.getBytes(), datestr.getBytes());
-				put.addColumn(family, CF1_LENGTH.getBytes(), length.getBytes());
-				put.addColumn(family, CF1_TYPE.getBytes(), type.getBytes());
+				//put.addColumn(family, CF1_LENGTH.getBytes(), length.getBytes());
+				//put.addColumn(family, CF1_TYPE.getBytes(), type.getBytes());
 				
 				puts.add(put);
 			}
 			
-			if (puts.size() > 1000){
+			if (puts.size() >= 100){
 				HBaseToolUtil.savePutList(puts, TABLE_NAME);
 				
 				puts.clear();

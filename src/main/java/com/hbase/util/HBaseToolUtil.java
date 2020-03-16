@@ -1,24 +1,16 @@
 package com.hbase.util;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.hbase.conn.HbaseConnHelper;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.hbase.conn.HbaseConnHelper;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HBaseToolUtil {
 
@@ -177,6 +169,8 @@ public class HBaseToolUtil {
 		admin.disableTable(tableName);
 		// 清空指定表的数据
 		admin.truncateTable(tableName, true);
+		// 设置表状态为有效
+		//admin.enableTable(tableName);
 
 		System.out.println("-------------------------清空表结束-----------------");
 	}
