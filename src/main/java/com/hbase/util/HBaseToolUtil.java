@@ -87,6 +87,25 @@ public class HBaseToolUtil {
 	}
 
 	/**
+	 * 创建命名空间
+	 * @param namespace
+	 * @throws IOException
+	 */
+	public static void createNamespace(String namespace) throws IOException {
+		Admin admin = HbaseConnHelper.getHAdmin();
+
+		try{
+			NamespaceDescriptor namespaceDescriptor = admin.getNamespaceDescriptor(namespace);
+			if (namespaceDescriptor != null) {
+			}
+		}catch(NamespaceNotFoundException e){
+			//若发生特定的异常，即找不到命名空间，则创建命名空间
+			NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create(namespace).build();
+			admin.createNamespace(namespaceDescriptor);
+		}
+	}
+
+	/**
      * 创建表，可以同时创建多个列簇
      *
      * @param tableName

@@ -4,6 +4,7 @@ import com.hbase.conn.HbaseConnHelper;
 import com.hbase.util.HBaseToolUtil;
 import com.hbase.util.PhoneUtils;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -16,15 +17,17 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class HbaseTest {
 
 	private final static String YYYY_MM_DD_HH_MM_SS = "yyyyMMddHHmmss";
+	// 命名空间
+	private final static String NAME_SPACE = "my_namespace";
 	// 表名，一般需要加上“名称空间:表名”
-	private final static String TABLE_NAME = "default:test";//"my_namespace:test";
+	private final static String TABLE_NAME = "my_namespace:test";
 	// 列族名，尽量短小，最好一个字符；同时备注全称cf
 	private final static String COL_FAMILY = "cf";
 	// 列族cf下的date列名，通话日期
@@ -41,15 +44,15 @@ public class HbaseTest {
 	// 最大保存版本数，默认是1
 	private final static int MAX_VERSIONS = 1;
 	// 数据存活时间，TTL参数的单位是秒，默认值是Integer.MAX_VALUE，即2^31-1=2 147 483 647 秒，大约68年。使用TTL默认值的数据可以理解为永久保存。
-	private final static int TIME_TO_LIVE = 2147483647;
+	private final static int TIME_TO_LIVE = HConstants.FOREVER; //2147483647;
 
 	public static void main(String[] args) throws Exception{
-		
-		//HBaseToolUtil.truncateTable(TABLE_NAME);
-		
-		Date startTime;
-		startTime = new Date();
 
+		LocalDateTime startTime = LocalDateTime.now();
+		HBaseToolUtil.createNamespace(NAME_SPACE);
+		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, Integer.MAX_VALUE, COL_FAMILY);
+		showSpendTime(startTime);
+		startTime = LocalDateTime.now();
 		// 创建表
 //		if (HBaseToolUtil.isExistTable(TABLE_NAME)) {
 //			HBaseToolUtil.deleteTable(TABLE_NAME);
@@ -61,13 +64,13 @@ public class HbaseTest {
 		HBaseToolUtil.truncateTable(TABLE_NAME);
 
 		showSpendTime(startTime);
-		startTime = new Date();
+		startTime = LocalDateTime.now();
 
 		insertPhoneNumToDB();
 
 		//HBaseToolUtil.getTableRowCount(TABLE_NAME);
 		showSpendTime(startTime);
-		startTime = new Date();
+		startTime = LocalDateTime.now();
 
 		/*
 			 1_18643853221_9223370529181710807 column=cf:date, timestamp=1583394294326, value=20171011060425
@@ -104,19 +107,19 @@ public class HbaseTest {
 		}
 
 		showSpendTime(startTime);
-//		startTime = new Date();
+//		startTime = LocalDateTime.now();
 //
 //		scanPhoneRecord("18695907472", "10", "11");
 //
 //		showSpendTime(startTime);
-//		startTime = new Date();
+//		startTime = LocalDateTime.now();
 //
 //		System.out.println("============================00");
 //
 //		scanDBPhoneNumByFilter("18699967612");
 //
 //		showSpendTime(startTime);
-//		startTime = new Date();
+//		startTime = LocalDateTime.now();
 //
 //
 		HBaseToolUtil.flush(TABLE_NAME);
@@ -126,9 +129,10 @@ public class HbaseTest {
 //		testRowKeyLength();
 	}
 	
-	private static void showSpendTime(Date startTime){
-		Date endTime = new Date();
-	    long spendTime = endTime.getTime() - startTime.getTime();
+	private static void showSpendTime(LocalDateTime startTime){
+		LocalDateTime endTime = LocalDateTime.now();
+		// 此日期时间与结束日期时间之间的时间量
+	    long spendTime = startTime.until(endTime, ChronoUnit.SECONDS);
 		System.out.println("spendTime:" + spendTime);
 	}
 	
