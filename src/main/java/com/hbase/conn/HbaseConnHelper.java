@@ -1,5 +1,6 @@
 package com.hbase.conn;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -8,6 +9,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 
 import java.io.IOException;
+import java.util.concurrent.*;
 
 public class HbaseConnHelper {
 
@@ -21,8 +23,9 @@ public class HbaseConnHelper {
 	 */
 	private HbaseConnHelper() {
 	  
-	}  
-	
+	}
+
+
 	/**
 	 * 创建连接对象
 	 * @return
@@ -46,10 +49,19 @@ public class HbaseConnHelper {
 		//conf.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
 		//conf.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem");
 
-		//ExecutorService pool = Executors.newFixedThreadPool(10);//建立一个数量为10的线程池  
+		//ExecutorService pool = Executors.newFixedThreadPool(10);//建立一个数量为10的线程池
+		int corePoolSize = 10;
+		int maximumPoolSize = 12;
+		long keepAliveTime = 10;
+		// 创建一个可重用固定线程数的线程池
+		ThreadFactory namedThreadFactory = new ThreadFactoryBuilder()
+				.setNameFormat("demo-pool-%d").build();
+		ExecutorService threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize,
+				keepAliveTime, TimeUnit.MILLISECONDS,
+				new LinkedBlockingQueue<>(1024), namedThreadFactory, new ThreadPoolExecutor.AbortPolicy());
 		try {
-			//connection = ConnectionFactory.createConnection(conf, pool);//用线程池创建connection  
-			connection = ConnectionFactory.createConnection(conf);
+			connection = ConnectionFactory.createConnection(conf, threadPool);//用线程池创建connection
+			//connection = ConnectionFactory.createConnection(conf);
 		} catch (IOException e) {
 			e.printStackTrace();
 		} 

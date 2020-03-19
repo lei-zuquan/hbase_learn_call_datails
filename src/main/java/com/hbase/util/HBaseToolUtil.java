@@ -9,6 +9,7 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -339,7 +340,7 @@ public class HBaseToolUtil {
 		Table table = HbaseConnHelper.getTable(tableName);
 		try {
 			table.put(putList) ;
-			System.out.println("成功插入数据到hbase:" + putList.size() + " 条");
+			System.out.println(Thread.currentThread().getName() + " 时间：" + LocalDateTime.now().getSecond() +  " 成功插入数据到hbase:" + putList.size() + " 条");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {

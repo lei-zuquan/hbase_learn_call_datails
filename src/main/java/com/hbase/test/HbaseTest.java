@@ -20,6 +20,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 
 public class HbaseTest {
 
@@ -47,18 +49,106 @@ public class HbaseTest {
 	private final static int TIME_TO_LIVE = HConstants.FOREVER; //2147483647;
 
 	public static void main(String[] args) throws Exception{
-
 		LocalDateTime startTime = LocalDateTime.now();
 		HBaseToolUtil.createNamespace(NAME_SPACE);
-		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, Integer.MAX_VALUE, COL_FAMILY);
+		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
 		showSpendTime(startTime);
 		startTime = LocalDateTime.now();
-		// 创建表
-//		if (HBaseToolUtil.isExistTable(TABLE_NAME)) {
-//			HBaseToolUtil.deleteTable(TABLE_NAME);
-//		}
-//		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE,COL_FAMILY);
 
+		// 插入测试数据，这里不建议使用insertToDB1接口
+		HBaseToolUtil.truncateTable(TABLE_NAME);
+		showSpendTime(startTime);
+
+		//singleThreadDoHbase();
+		multiThreadDoHbase();
+
+	}
+
+	private static void multiThreadDoHbase() throws Exception{
+		int threadCount = 10;
+		Vector<Thread> threadVector = new Vector<>();
+		for (int i = 11; i <= threadCount +10; i++) {
+			String threadName = "i" + i + "_";
+			Thread childThread = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					for (int j = 0; j < 10; j++) {
+						insertOneDataToHbase(threadName);
+						try {
+							TimeUnit.SECONDS.sleep(2);
+						} catch (Exception ex){
+							ex.printStackTrace();
+						}
+					}
+				}
+			}, threadName);
+			threadVector.add(childThread);
+			childThread.start();
+//			new Thread(() -> {
+//				for (int j = 0; j < 10; j++) {
+//					insertOneDataToHbase(threadName);
+//				}
+//
+//			}, String.valueOf(i)).start();
+		}
+
+		// 需要等待上面20个线程都全部计算完成后，再用main线程取得最终的结果值看是多少？
+		for (Thread thread: threadVector){
+			thread.join();
+		}
+		HbaseConnHelper.closeConnection();
+		System.exit(0);
+	}
+
+	private static void insertOneDataToHbase(String prefix){
+
+		byte[] family = COL_FAMILY.getBytes();
+
+		List<Put> puts = new ArrayList<Put>();
+
+		String pnum = PhoneUtils.getPhoneNum(prefix);
+		for (int j = 0; j < 1; j++) {
+			// 通话号码：17796695196
+			String dnum = PhoneUtils.getPhoneNum("177");
+			// 通话时长：20171213212605   2017年12月13日21时26分05秒
+			String datestr = PhoneUtils.getDate("2017");
+			// 通话时长：56秒
+			String length = PhoneUtils.getCallLength();
+			// 通话类型：0主叫，1被叫
+			String type = PhoneUtils.getCallType();
+
+			SimpleDateFormat sdf = new SimpleDateFormat(YYYY_MM_DD_HH_MM_SS);
+			// Rowkey：分区号_手机号_（Long.max-通话时间)
+			// 02_18685184797_9223370523683210807
+			// Long.MAX_VALUE(922337^2036854775807) - 1513171565000(20171213212605)
+			// 02_18685184797_9223370523688018807
+
+			pnum = HBaseToolUtil.reverseRowkey(pnum);
+			int regionNum = HBaseToolUtil.genRegionNum(pnum, REGION_COUNT);
+			LocalDateTime dateTime = LocalDateTime.parse(datestr, DateTimeFormatter.ofPattern(YYYY_MM_DD_HH_MM_SS));
+			long milli = dateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
+
+			String rowKey = regionNum + "_" + pnum + "_" + (Long.MAX_VALUE - milli);
+			Put put = new Put(rowKey.getBytes());
+			//put.addColumn(family, CF1_DNUM.getBytes(), dnum.getBytes());
+			put.addColumn(family, CF1_DATE.getBytes(), datestr.getBytes());
+			//put.addColumn(family, CF1_LENGTH.getBytes(), length.getBytes());
+			//put.addColumn(family, CF1_TYPE.getBytes(), type.getBytes());
+
+			puts.add(put);
+		}
+
+		if (puts.size() >= 100){
+			HBaseToolUtil.savePutList(puts, TABLE_NAME);
+
+			puts.clear();
+		}
+
+
+		HBaseToolUtil.savePutList(puts, TABLE_NAME);
+	}
+	private static void singleThreadDoHbase() throws Exception{
+		LocalDateTime startTime = LocalDateTime.now();
 
 		// 插入测试数据，这里不建议使用insertToDB1接口
 		HBaseToolUtil.truncateTable(TABLE_NAME);
@@ -124,7 +214,7 @@ public class HbaseTest {
 //
 		HBaseToolUtil.flush(TABLE_NAME);
 
-		HbaseConnHelper.closeConnection();
+//		HbaseConnHelper.closeConnection();
 //
 //		testRowKeyLength();
 	}
