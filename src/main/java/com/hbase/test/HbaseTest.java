@@ -21,7 +21,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
-import java.util.concurrent.TimeUnit;
 
 public class HbaseTest {
 
@@ -50,13 +49,13 @@ public class HbaseTest {
 
 	public static void main(String[] args) throws Exception{
 		LocalDateTime startTime = LocalDateTime.now();
-		HBaseToolUtil.createNamespace(NAME_SPACE);
-		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
-		showSpendTime(startTime);
-		startTime = LocalDateTime.now();
+		//HBaseToolUtil.createNamespace(NAME_SPACE);
+		//HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
+		//showSpendTime(startTime);
+		//startTime = LocalDateTime.now();
 
 		// 插入测试数据，这里不建议使用insertToDB1接口
-		HBaseToolUtil.truncateTable(TABLE_NAME);
+		//HBaseToolUtil.truncateTable(TABLE_NAME);
 		showSpendTime(startTime);
 
 		//singleThreadDoHbase();
@@ -72,10 +71,10 @@ public class HbaseTest {
 			Thread childThread = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					for (int j = 0; j < 10; j++) {
+					for (int j = 0; j < 20; j++) {
 						insertOneDataToHbase(threadName);
 						try {
-							TimeUnit.SECONDS.sleep(2);
+							//TimeUnit.SECONDS.sleep(2);
 						} catch (Exception ex){
 							ex.printStackTrace();
 						}
@@ -107,7 +106,7 @@ public class HbaseTest {
 		List<Put> puts = new ArrayList<Put>();
 
 		String pnum = PhoneUtils.getPhoneNum(prefix);
-		for (int j = 0; j < 1; j++) {
+		for (int j = 0; j < 10; j++) {
 			// 通话号码：17796695196
 			String dnum = PhoneUtils.getPhoneNum("177");
 			// 通话时长：20171213212605   2017年12月13日21时26分05秒
