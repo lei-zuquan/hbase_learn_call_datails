@@ -34,16 +34,98 @@ run()线程运行方法
 
 MemStoreFlusher.java
 --------------------
+    如果MemStore大小超过堆内存的0.4或者超过堆内存的0.38，如果超过堆内存的0.38客户端就不能往里面写数据（进行阻塞），直到低于堆内存的0.38，可以写
     FlushHandler extends HasThread {}
-        flushOneForGlobalPressure()
-          /**
-           * The memstore across all regions has exceeded the low water mark. Pick
-           * one region to flush and flush it synchronously (this is called from the
-           * flush thread)
-           * @return true if successful
-           */
-           /**
-           所有地区的记忆库都已超过最低水位线。 选择一个区域进行冲洗并同步冲洗（从冲洗线程中调用）
-           *如果成功，则返回true
-           */
+        run()
+            flushOneForGlobalPressure()
+              /**
+               * The memstore across all regions has exceeded the low water mark. Pick
+               * one region to flush and flush it synchronously (this is called from the
+               * flush thread)
+               * @return true if successful
+               */
+               /**
+               所有地区的记忆库都已超过最低水位线。 选择一个区域进行冲洗并同步冲洗（从冲洗线程中调用）
+               *如果成功，则返回true
+               */
 
+               flushRegion(regionToFlush, true, true);
+               / **
+                   *冲洗一个区域。
+                   * @param region要刷新的区域。
+                   * @param EmergencyFlush设置是否强制刷新。 如果为true，则需要从刷新队列中删除该区域。 如果为false，则在主刷新程序运行循环中调用我们时，通过在刷新队列上调用poll（将其删除）来刷新条目。
+                   * @param forceFlushAllStores是否要刷新所有存储。
+                   * @return如果成功刷新了区域，则返回true，否则返回false。 如果为false，将附带日志消息，说明未刷新该区域的原因。
+               */
+
+HRegion.java
+----------------
+/*
+   * Check if resources to support an update.
+   *
+   * We throw RegionTooBusyException if above memstore limit
+   * and expect client to retry using some kind of backoff
+  */
+  private void checkResources() throws RegionTooBusyException {
+    // If catalog region, do not impose resource constraints or block updates.
+    if (this.getRegionInfo().isMetaRegion()) return;
+
+    // 当异常超过128 * 4时，会进行刷写请求，同时会往外抛异常告诉业务当前正在忙碌
+    if (this.memstoreSize.get() > this.blockingMemStoreSize) {
+      blockedRequestsCount.increment();
+      requestFlush();
+      throw new RegionTooBusyException("Above memstore limit, " +
+          "regionName=" + (this.getRegionInfo() == null ? "unknown" :
+          this.getRegionInfo().getRegionNameAsString()) +
+          ", server=" + (this.getRegionServerServices() == null ? "unknown" :
+          this.getRegionServerServices().getServerName()) +
+          ", memstoreSize=" + memstoreSize.get() +
+          ", blockingMemStoreSize=" + blockingMemStoreSize);
+    }
+  }
+
+=======================
+doMiniBatchMutation
+    / **
+    * 由给定线程持有的行锁。
+    * 一个线程可以同时在同一行上获取多个锁。
+    * 必须通过从同一线程调用release（）来释放锁。
+    * /
+    RowLock rowLock = null; // HBase只支持行级锁
+
+    // STEP 1. Try to acquire as many locks as we can, and ensure we acquire at least one.
+            //步骤1.尝试获取尽可能多的锁，并确保至少获取一个。
+    // STEP 2. Update any LATEST_TIMESTAMP timestamps
+            //步骤2。更新所有LATEST_TIMESTAMP时间戳
+    // STEP 3. Build WAL edit
+            //步骤3。建立WAL编辑
+    // STEP 4. Append the final edit to WAL. Do not sync wal. // 写数据到WAL中。目前数据在预写日志中进行追加，并没有同步到HFile文件当中
+            //步骤4。将最终编辑附加到WAL。 不同步wal。
+    // STEP 5. Write back to memstore   // 写数据到MemStore
+            //步骤5。写回到memstore
+    // Write to memstore. It is ok to write to memstore
+    // first without syncing the WAL because we do not roll
+    // forward the memstore MVCC. The MVCC will be moved up when
+    // the complete operation is done. These changes are not yet
+    // visible to scanners till we update the MVCC. The MVCC is
+    // moved only when the sync is complete.
+             //写入memstore。 可以写信给memstore
+             //首先不同步WAL，因为我们不滚动
+             //转发记忆库MVCC。 MVCC将在以下时间向上移动
+             //完成完整的操作。 这些变化尚未
+             //对扫描程序可见，直到我们更新MVCC。 MVCC是
+             //仅在同步完成后才移动。
+
+    // STEP 6. Release row locks, etc. // 释放行级锁
+             // STEP 6.释放行锁，等等。
+    // STEP 7. Sync wal.
+            // STEP7。同步wal。
+    // STEP 8. Advance mvcc. This will make this put visible to scanners and getters.
+            //步骤8。前进mvcc。 这将使扫描器和吸气剂可以看到此放置的内容。
+    // STEP 9. Run coprocessor post hooks. This should be done after the wal is synced so that the coprocessor contract is adhered to.
+            //步骤9.运行协处理器后钩子。 应该在同步沃尔玛之后执行此操作，以便遵守协处理器合同。
+            rollbackMemstore // if the wal sync was unsuccessful, remove keys from memstore
+
+    
+
+    
