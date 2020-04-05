@@ -1,0 +1,146 @@
+    <property>  
+        <name>hbase.master.port</name>  
+        <value>16000</value>  
+        <description>The port the HBase Master should bind to.</description>  
+    </property>  
+    <!-- regionServer的全局memstore的大小，超过该大小会触发flush到磁盘的操作,默认是堆大小的40%,而且regionserver级别的   
+        flush会阻塞客户端读写 -->  
+    <property>  
+        <name>hbase.regionserver.global.memstore.size</name>  
+        <value></value>  
+        <description>Maximum size of all memstores in a region server before  
+            new  
+            updates are blocked and flushes are forced. Defaults to 40% of max heap (0.4).  
+            Updates are blocked and flushes are forced until size of all  
+            memstores  
+            in a region server hits  
+            hbase.regionserver.global.memstore.size.lower.limit.  
+            The default value in this configuration has been intentionally left  
+            emtpy in order to  
+            honor the old hbase.regionserver.global.memstore.upperLimit property if  
+            present.  
+        </description>  
+    </property> 
+    <!--可以理解为一个安全的设置，有时候集群的“写负载”非常高，写入量一直超过flush的量，这时，我们就希望memstore不要超过一定的安全设置。   
+        在这种情况下，写操作就要被阻塞一直到memstore恢复到一个“可管理”的大小, 这个大小就是默认值是堆大小 * 0.4 * 0.95，也就是当regionserver级别   
+        的flush操作发送后,会阻塞客户端写,一直阻塞到整个regionserver级别的memstore的大小为 堆大小 * 0.4 *0.95为止 -->  
+    <property>  
+        <name>hbase.regionserver.global.memstore.size.lower.limit</name>  
+        <value></value>  
+        <description>Maximum size of all memstores in a region server before  
+            flushes are forced.  
+            Defaults to 95% of hbase.regionserver.global.memstore.size (0.95).  
+            A 100% value for this value causes the minimum possible flushing to  
+            occur when updates are  
+            blocked due to memstore limiting.  
+            The default value in this configuration has been intentionally left  
+            emtpy in order to  
+            honor the old hbase.regionserver.global.memstore.lowerLimit property if  
+            present.  
+        </description>  
+    </property> 
+    <!-- 内存中的文件在自动刷新之前能够存活的最长时间，默认是1h -->  
+    <property>  
+        <name>hbase.regionserver.optionalcacheflushinterval</name>  
+        <value>3600000</value>  
+        <description>  
+            Maximum amount of time an edit lives in memory before being automatically  
+            flushed.  
+            Default 1 hour. Set it to 0 to disable automatic flushing.  
+        </description>  
+    </property>  
+    <!-- region在切分的时候的默认切分策略 -->  
+    <property>  
+        <name>hbase.regionserver.region.split.policy</name>  
+        <value>org.apache.hadoop.hbase.regionserver.IncreasingToUpperBoundRegionSplitPolicy  
+        </value>  
+        <description>  
+            A split policy determines when a region should be split. The various  
+            other split policies that  
+            are available currently are ConstantSizeRegionSplitPolicy,  
+            DisabledRegionSplitPolicy,  
+            DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.  
+        </description>  
+    </property>  
+    <!-- 当某个HRegionServer上的region到达这个限制时，不会在进行region切分，也就是一个HRegionServer默认最大允许有1000个region -->  
+    <property>  
+        <name>hbase.regionserver.regionSplitLimit</name>  
+        <value>1000</value>  
+        <description>  
+            Limit for the number of regions after which no more region splitting  
+            should take place.  
+            This is not hard limit for the number of regions but acts as a guideline  
+            for the regionserver  
+            to stop splitting after a certain limit. Default is set to 1000.  
+        </description>  
+    </property> 
+    <!-- 单个region里memstore的缓存大小，超过那么整个HRegion就会flush,默认128M -->  
+    <property>  
+        <name>hbase.hregion.memstore.flush.size</name>  
+        <value>134217728</value>  
+        <description>  
+            Memstore will be flushed to disk if size of the memstore  
+            exceeds this number of bytes. Value is checked by a thread that runs  
+            every hbase.server.thread.wakefrequency.  
+        </description>  
+    </property>  
+    <!-- 当一个HRegion上的memstore的大小满足hbase.hregion.memstore.block.multiplier *   
+        hbase.hregion.memstore.flush.size, 这个HRegion会执行flush操作并阻塞对该HRegion的写入 -->  
+    <property>  
+        <name>hbase.hregion.memstore.block.multiplier</name> 
+        <value>4</value>  
+        <description>  
+            Block updates if memstore has hbase.hregion.memstore.block.multiplier  
+            times hbase.hregion.memstore.flush.size bytes. Useful preventing  
+            runaway memstore during spikes in update traffic. Without an  
+            upper-bound, memstore fills such that when it flushes the  
+            resultant flush files take a long time to compact or split, or  
+            worse, we OOME.  
+        </description>  
+    </property> 
+    <!--HStoreFile最大的大小，当某个region的某个列族超过这个大小会进行region拆分, 10G -->  
+    <property>  
+        <name>hbase.hregion.max.filesize</name>  
+        <value>10737418240</value>  
+        <description>  
+            Maximum HStoreFile size. If any one of a column families' HStoreFiles has  
+            grown to exceed this value, the hosting HRegion is split in two.  
+        </description>  
+    </property> 
+    <!-- 一个region进行 major compaction合并的周期,在这个点的时候， 这个region下的所有hfile会进行合并,默认是7天,major   
+        compaction非常耗资源,建议生产关闭(设置为0)，在应用空闲时间手动触发 -->  
+    <property>  
+        <name>hbase.hregion.majorcompaction</name>  
+        <value>604800000</value>  
+        <description>The time (in miliseconds) between 'major' compactions of  
+            all  
+            HStoreFiles in a region. Default: Set to 7 days. Major compactions tend to  
+            happen exactly when you need them least so enable them such that they  
+            run at  
+            off-peak for your deploy; or, since this setting is on a periodicity that is  
+            unlikely to match your loading, run the compactions via an external  
+            invocation out of a cron job or some such.  
+        </description>  
+    </property> 
+    <!-- 每个minor compaction操作的 允许的最大hfile文件上限 -->  
+    <property>  
+        <name>hbase.hstore.compaction.max</name>  
+        <value>10</value>  
+        <description>Max number of HStoreFiles to compact per 'minor'  
+            compaction.</description>  
+    </property> 
+    <property>  
+        <name>hbase.coprocessor.abortonerror</name>  
+        <value>true</value>  
+        <description>Set to true to cause the hosting server (master or  
+            regionserver)  
+            to abort if a coprocessor fails to load, fails to initialize, or throws  
+            an  
+            unexpected Throwable object. Setting this to false will allow the server to  
+            continue execution but the system wide state of the coprocessor in  
+            question  
+            will become inconsistent as it will be properly executing in only a  
+            subset  
+            of servers, so this is most useful for debugging only.  
+        </description>  
+    </property>  

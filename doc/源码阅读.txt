@@ -1,0 +1,49 @@
+HRegionServer.java
+HRegionServer extends HasThread implements RegionServerServices, LastSequenceId {}
+--------------------
+run()线程运行方法
+    preRegistrationInitialization(); // 准备初始化工作
+        initializeThreads();
+                // 创建刷写数据到文件线程：Cache flushing thread.
+                this.cacheFlusher = new MemStoreFlusher(conf, this);
+                // 创建合并小文件线程：Compaction thread
+                this.compactSplitThread = new CompactSplitThread(this);
+
+    handleReportForDutyResponse(w); // Run init. Sets up wal and starts up all server threads.
+        startServiceThreads();
+          /*
+           * Start maintenance Threads, Server, Worker and lease checker threads.
+           * Install an UncaughtExceptionHandler that calls abort of RegionServer if we
+           * get an unhandled exception. We cannot set the handler on all threads.
+           * Server's internal Listener thread is off limits. For Server, if an OOME, it
+           * waits a while then retries. Meantime, a flush or a compaction that tries to
+           * run should trigger same critical condition and the shutdown will run. On
+           * its way out, this server will shut down Server. Leases are sort of
+           * inbetween. It has an internal thread that while it inherits from Chore, it
+           * keeps its own internal stop mechanism so needs to be stopped by this
+           * hosting server. Worker logs the exception and exits.
+           */
+            *启动维护线程，服务器，工作线程和检查程序线程。
+            *如果我们获得未处理的异常，通过调用UncaughtExceptionHandler来调用RegionServer的异常终止
+            *我们不能在所有线程上设置处理程序。服务器的内部侦听器线程已超出限制。
+            *对于服务器，如果是OOM，则为等待片刻，然后重试。 同时，尝试刷新或压缩
+            *运行应触发相同的临界条件，并且将运行关机。
+            *所有方法都尝试完了，此服务器将关闭服务器。
+            *租赁有之间。 它具有一个内部线程，尽管它从Chore继承而来，保留自己的内部停止机制，因此需要以此停止
+            *托管服务器。 Worker记录异常并退出。
+
+MemStoreFlusher.java
+--------------------
+    FlushHandler extends HasThread {}
+        flushOneForGlobalPressure()
+          /**
+           * The memstore across all regions has exceeded the low water mark. Pick
+           * one region to flush and flush it synchronously (this is called from the
+           * flush thread)
+           * @return true if successful
+           */
+           /**
+           所有地区的记忆库都已超过最低水位线。 选择一个区域进行冲洗并同步冲洗（从冲洗线程中调用）
+           *如果成功，则返回true
+           */
+
