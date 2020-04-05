@@ -1,3 +1,13 @@
+源码阅读关键的几个类：
+1、HRegionServer.java
+2、HRegion.java
+3、HStore.java
+4、MemStoreFlusher.java
+5、HConstants.java
+6、HeapMemorySizeUtil.java
+7、PeriodicMemstoreFlusher类
+8、IncreasingToUpperBoundRegionSplitPolicy
+
 HRegionServer.java
 HRegionServer extends HasThread implements RegionServerServices, LastSequenceId {}
 --------------------
@@ -127,5 +137,147 @@ doMiniBatchMutation
             rollbackMemstore // if the wal sync was unsuccessful, remove keys from memstore
 
     
+1.2.0版本：
+重点1：
+    哪些情况下HBase会对memStore数据进行刷写：
+    条件1：整个 RegionServer 的 MemStore 占用内存总和大于相关阈值。当单个HRegion内所有的MemStore大小总和超过指定值时，默认128M，flush该HRegion的所有memStore。RegionServer的flush是通过将请求添加一个队列，模拟生产消引费
+        模型来异步处理的。那这里就有一个问题，当队列来不及消费，产生大量积压请求时，可能会导致内存陡增，最坏的情况是触发OOM。
+
+    条件2：单个region里memstore的缓存大小，超过那么整个HRegion就会flush,默认128M 。 当MemStore使用内存总量达到hbase.regionserver.global.memstore.upperLimit指定值时，将会有多个MemStores flush到文件中，
+        MemStore flush 顺序是按照大小降序执行的，直到刷新到MemStore使用内存略小于lowerLimit
+            hbase.regionserver.global.memstore.upperLimit: 0.4
+            hbase.regionserver.global.memstore.size（新版本），默认0.4
+            hbase.regionserver.global.memstore.lowerLimit: 0.95 即：0.4 * 0.95 = 0.38，超过堆内存最大值的0.38，则会阻塞写操作，直到memStore恢复到一个“可管理”的大小
+            hbase.regionserver.global.memstore.size.lower.limit(新版本)，默认0.95
+            另外：如果memStore大小超过128 * 4 = 512M 时，也会阻塞写入操作；源码位置： HRegion.java --> checkResources()
+    条件3：内存中的文件在自动刷新之前能够存活的最长时间，默认是1h；超过存活1h小时，也会进行刷写
+
+    条件4：WAL数量大于相关阈值
+
+    条件5：定期自动刷写，
+        如果我们很久没有对 HBase 的数据进行更新，这时候就可以依赖定期刷写策略了。
+        RegionServer 在启动的时候会启动一个线程 PeriodicMemStoreFlusher
+        每隔 hbase.server.thread.wakefrequency 时间去检查属于这个 RegionServer 的 Region
+        有没有超过一定时间都没有刷写，这个时间是由 hbase.regionserver.optionalcacheflushinterval 参数控制的，
+        默认是 3600000，也就是1小时会进行一次刷写。如果设定为0，则意味着关闭定时自动刷写。
+        为了防止一次性有过多的 MemStore 刷写，定期自动刷写会有 0 ~ 5 分钟的延迟，具体参见 PeriodicMemStoreFlusher 类的实现。
+
+    条件6：数据更新超过一定阈值
+        如果 HBase 的某个 Region 更新的很频繁，而且既没有达到自动刷写阀值，也没有达到内存的使用限制，但是内存中的更新数量已经足够多，
+        比如超过 hbase.regionserver.flush.per.changes 参数配置，默认为30000000，那么也是会触发刷写的。
+
+    条件7：手动触发刷写
+
+    需要注意的是，以上所有条件触发的刷写操作最后都会检查对应的 HStore 包含的 StoreFiles 文件
+    超过 hbase.hstore.blockingStoreFiles 参数配置的个数，默认值是16。如果满足这个条件，
+    那么当前刷写会被推迟到 hbase.hstore.blockingWaitTime 参数设置的时间后再刷写。
+    在阻塞刷写的同时，HBase 还会请求 Split 或 Compaction 操作。
+
+
+重点2：注意不同版本的切分策略是不一样的
+    源码位置：HRegion.java 中 checkSplit()
+    哪些情况下HBase会对region进行拆分
+    条件1：
+        HStoreFile最大的大小，当某个region的某个列族超过这个大小会进行region拆分，默认10G
+        涉及参数：
+            hbase.hregion.max.filesize，默认10737418240
+
+    条件2：
+        第一回：当合并的数据超过256M 分进行拆分。initialSize = 2 * conf.getLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE);
+        第二回：当合并的数据超过256 * 2 * 2 * 2 = 2G大小
+
+    不切分条件：
+        当某个HRegionServer上的region到达这个限制时，不会在进行region切分，也就是一个HRegionServer默认最大允许有1000个region
+
+
+
+重点3：
+    什么时候将delete中的数据进删除？
+        hbase删除是通过向hbase添加删除标记来完成的，让client端查询不到该数据；真正删除数据是在合并compact环节中的major compact进行。
+
+
+重点4：
+    什么时候对数据进行合并compact？
+        条件1：MemStore刷写后，判断是否compaction
+        条件2：CompactionChecker线程，周期轮询
+
+
+重点5：
+    合并起到哪几个作用？
+        1、合并文件
+        2、清除删除、过期、多余版本的数据
+        3、提高读写数据的效率
+
+    合并分为minor compact和major compact，这两种 compact方式的区别：
+        1、Minor操作只用来做部分文件的合并操作以及包括minVersion=0并且设置ttl的过期版本清理，不做任何删除数据、多版本数据的清理工作。
+        2、Major操作是对Region下的HStore下的所有StoreFile执行合并操作，最终的结果是整理合并出一个文件。
+
+    合并compact 触发时机：
+        1、MemStore刷写后，判断是否compaction
+        2、CompactionChecker线程，周期轮询
+
+
+重点6：HBase如何优化？
+    内存优化
+        垃圾回收优化:CMS, G1(Region）
+        JVM启动：-Xms(1/64) –Xmx(1/4)
+    Region优化
+        预分区
+        禁用major合并，手动合并：hbase.hregion.majorcompaction
+    客户端优化
+        批处理
+        Hbase配置优化：
+            高可用
+            预分区
+            RowKey设计
+            内存优化
+                HBase操作过程中需要大量的内存开销，毕竟Table是可以缓存在内存中的，一般会分配整个可用内存的70%给HBase的Java堆。
+                但是不建议分配非常大的堆内存，因为GC过程持续太久会导致RegionServer处于长期不可用状态，一般16~48G内存就可以了，
+                如果因为框架占用内存过高导致系统内存不足，框架一样会被系统服务拖死。
+        HDFS优化：
+                1．允许在HDFS的文件中追加内容
+                2．优化DataNode允许的最大文件打开数
+                3．优化延迟高的数据操作的等待时间
+                4．优化数据的写入效率
+                5．设置RPC监听数量
+                6．优化HStore文件大小
+                7．优化hbase客户端缓存
+                8．指定scan.next扫描HBase所获取的行数
+                9．flush、compact、split机制
+
+
+重点7：HBase支持事务么？
+            HBase数据库侧重于海量数据的存储，所以没有事务的概念。
+            但是，HBase单纯一条row数据具有原子性，就是同一个row写操作不允许被打断。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     
