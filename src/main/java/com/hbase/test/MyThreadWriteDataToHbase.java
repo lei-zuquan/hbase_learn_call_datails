@@ -27,7 +27,7 @@ public class MyThreadWriteDataToHbase extends Thread {
             e.printStackTrace();
         }
 
-        for (int j = 0; j < 10; j++) {
+        for (int j = 0; j < 1; j++) {
             HBaseUtilTest.insertOneDataToHbase(getName());
 
             try {

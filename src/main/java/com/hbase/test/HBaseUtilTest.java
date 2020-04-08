@@ -94,7 +94,7 @@ public class HBaseUtilTest {
 		List<Put> puts = new ArrayList<>();
 
 		String pnum = PhoneUtils.getPhoneNum(prefix);
-		for (int j = 0; j < 100; j++) {
+		for (int j = 0; j < 1000; j++) {
 			// 通话号码：17796695196
 			String dnum = PhoneUtils.getPhoneNum("177");
 			// 通话时长：20171213212605   2017年12月13日21时26分05秒
@@ -117,7 +117,7 @@ public class HBaseUtilTest {
 
 			String rowKey = regionNum + "_" + pnum + "_" + (Long.MAX_VALUE - milli);
 			Put put = new Put(rowKey.getBytes());
-			//put.addColumn(family, CF1_DNUM.getBytes(), dnum.getBytes());
+			put.addColumn(family, CF1_DNUM.getBytes(), dnum.getBytes());
 			put.addColumn(family, CF1_DATE.getBytes(), (datestr + Constants.DATE_STR).getBytes());
 			//put.addColumn(family, CF1_LENGTH.getBytes(), length.getBytes());
 			//put.addColumn(family, CF1_TYPE.getBytes(), type.getBytes());
