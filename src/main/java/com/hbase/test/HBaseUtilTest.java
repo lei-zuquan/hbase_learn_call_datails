@@ -1,7 +1,7 @@
 package com.hbase.test;
 
 import com.hbase.conn.HbaseConnHelper;
-import com.hbase.util.HBaseToolUtil;
+import com.hbase.util.HBaseUtil;
 import com.hbase.util.PhoneUtils;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -22,13 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-public class HbaseTest {
+public class HBaseUtilTest {
 
 	private final static String YYYY_MM_DD_HH_MM_SS = "yyyyMMddHHmmss";
 	// 命名空间
 	private final static String NAME_SPACE = "my_namespace";
 	// 表名，一般需要加上“名称空间:表名”
-	private final static String TABLE_NAME = "my_namespace:test";
+	private final static String TABLE_NAME = "my_namespace:hbase_learn_call_datails";
 	// 列族名，尽量短小，最好一个字符；同时备注全称cf
 	private final static String COL_FAMILY = "cf";
 	// 列族cf下的date列名，通话日期
@@ -49,46 +49,33 @@ public class HbaseTest {
 
 	public static void main(String[] args) throws Exception{
 		LocalDateTime startTime = LocalDateTime.now();
-		//HBaseToolUtil.createNamespace(NAME_SPACE);
-		//HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
-		//showSpendTime(startTime);
-		//startTime = LocalDateTime.now();
-
 		// 插入测试数据，这里不建议使用insertToDB1接口
-		//HBaseToolUtil.truncateTable(TABLE_NAME);
+		HBaseUtil.makeHbaseConnection();
+		//HBaseUtil.createNamespace(NAME_SPACE);
+		//HBaseUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
+		showSpendTime(startTime);
+		startTime = LocalDateTime.now();
+
+		HBaseUtil.truncateTable(TABLE_NAME);
+
 		showSpendTime(startTime);
 
 		//singleThreadDoHbase();
 		multiThreadDoHbase();
-
+		LocalDateTime endTime = LocalDateTime.now();
+		long spendTime = startTime.until(endTime, ChronoUnit.SECONDS);
+		System.err.println("spendTime:" + spendTime);
 	}
 
 	private static void multiThreadDoHbase() throws Exception{
-		int threadCount = 10;
+		int startNo = 11;
+		int threadCount = 10 + startNo;
 		Vector<Thread> threadVector = new Vector<>();
-		for (int i = 11; i <= threadCount +10; i++) {
+		for (int i = startNo; i < threadCount; i++) {
 			String threadName = "i" + i + "_";
-			Thread childThread = new Thread(new Runnable() {
-				@Override
-				public void run() {
-					for (int j = 0; j < 20; j++) {
-						insertOneDataToHbase(threadName);
-						try {
-							//TimeUnit.SECONDS.sleep(2);
-						} catch (Exception ex){
-							ex.printStackTrace();
-						}
-					}
-				}
-			}, threadName);
+			MyThreadWriteDataToHbase childThread = new MyThreadWriteDataToHbase(threadName);
 			threadVector.add(childThread);
 			childThread.start();
-//			new Thread(() -> {
-//				for (int j = 0; j < 10; j++) {
-//					insertOneDataToHbase(threadName);
-//				}
-//
-//			}, String.valueOf(i)).start();
 		}
 
 		// 需要等待上面20个线程都全部计算完成后，再用main线程取得最终的结果值看是多少？
@@ -99,14 +86,15 @@ public class HbaseTest {
 		System.exit(0);
 	}
 
-	private static void insertOneDataToHbase(String prefix){
+
+	public static void insertOneDataToHbase(String prefix){
 
 		byte[] family = COL_FAMILY.getBytes();
 
-		List<Put> puts = new ArrayList<Put>();
+		List<Put> puts = new ArrayList<>();
 
 		String pnum = PhoneUtils.getPhoneNum(prefix);
-		for (int j = 0; j < 10; j++) {
+		for (int j = 0; j < 100; j++) {
 			// 通话号码：17796695196
 			String dnum = PhoneUtils.getPhoneNum("177");
 			// 通话时长：20171213212605   2017年12月13日21时26分05秒
@@ -122,42 +110,36 @@ public class HbaseTest {
 			// Long.MAX_VALUE(922337^2036854775807) - 1513171565000(20171213212605)
 			// 02_18685184797_9223370523688018807
 
-			pnum = HBaseToolUtil.reverseRowkey(pnum);
-			int regionNum = HBaseToolUtil.genRegionNum(pnum, REGION_COUNT);
+			pnum = HBaseUtil.reverseRowkey(pnum);
+			int regionNum = HBaseUtil.genRegionNum(pnum, REGION_COUNT);
 			LocalDateTime dateTime = LocalDateTime.parse(datestr, DateTimeFormatter.ofPattern(YYYY_MM_DD_HH_MM_SS));
 			long milli = dateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
 
 			String rowKey = regionNum + "_" + pnum + "_" + (Long.MAX_VALUE - milli);
 			Put put = new Put(rowKey.getBytes());
 			//put.addColumn(family, CF1_DNUM.getBytes(), dnum.getBytes());
-			put.addColumn(family, CF1_DATE.getBytes(), datestr.getBytes());
+			put.addColumn(family, CF1_DATE.getBytes(), (datestr + Constants.DATE_STR).getBytes());
 			//put.addColumn(family, CF1_LENGTH.getBytes(), length.getBytes());
 			//put.addColumn(family, CF1_TYPE.getBytes(), type.getBytes());
 
 			puts.add(put);
 		}
 
-		if (puts.size() >= 100){
-			HBaseToolUtil.savePutList(puts, TABLE_NAME);
-
-			puts.clear();
-		}
-
-
-		HBaseToolUtil.savePutList(puts, TABLE_NAME);
+		HBaseUtil.savePutList(puts, TABLE_NAME);
 	}
+
 	private static void singleThreadDoHbase() throws Exception{
 		LocalDateTime startTime = LocalDateTime.now();
 
 		// 插入测试数据，这里不建议使用insertToDB1接口
-		HBaseToolUtil.truncateTable(TABLE_NAME);
+		HBaseUtil.truncateTable(TABLE_NAME);
 
 		showSpendTime(startTime);
 		startTime = LocalDateTime.now();
 
 		insertPhoneNumToDB();
 
-		//HBaseToolUtil.getTableRowCount(TABLE_NAME);
+		HBaseUtil.getTableRowCount(TABLE_NAME);
 		showSpendTime(startTime);
 		startTime = LocalDateTime.now();
 
@@ -184,7 +166,7 @@ public class HbaseTest {
 		 */
 
 		String rowKey = "2_18695907472_9223370551441677807";
-		Result result = HBaseToolUtil.getOneRow(TABLE_NAME, rowKey);
+		Result result = HBaseUtil.getOneRow(TABLE_NAME, rowKey);
 		if (!result.isEmpty()){
 			byte[] family = COL_FAMILY.getBytes();
 			System.out.print(new String(CellUtil.cloneValue(result.getColumnLatestCell(family, CF1_DNUM.getBytes()))));
@@ -211,7 +193,7 @@ public class HbaseTest {
 //		startTime = LocalDateTime.now();
 //
 //
-		HBaseToolUtil.flush(TABLE_NAME);
+		HBaseUtil.flush(TABLE_NAME);
 
 //		HbaseConnHelper.closeConnection();
 //
@@ -228,10 +210,10 @@ public class HbaseTest {
 	@SuppressWarnings("unused")
 	private static void insertToDB1() throws Exception{
 		// 创建表
-		HBaseToolUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
+		HBaseUtil.createTable(TABLE_NAME, REGION_COUNT, MAX_VERSIONS, TIME_TO_LIVE, COL_FAMILY);
 		
 		// 插入数据
-		List<Put> list = new ArrayList<Put>();
+		List<Put> list = new ArrayList<>();
 		String rowKeyStr = "r1";
 		Put put = new Put(rowKeyStr.getBytes());
 		put.addColumn(COL_FAMILY.getBytes(), "name".getBytes(), "zhaoliu1".getBytes()) ;
@@ -246,24 +228,24 @@ public class HbaseTest {
 		put.addColumn(COL_FAMILY.getBytes(), "tel".getBytes(), "13567882341".getBytes()) ;
 		list.add(put);
 		
-		HBaseToolUtil.savePutList(list, TABLE_NAME);
-		HBaseToolUtil.savePut(put, TABLE_NAME);
+		HBaseUtil.savePutList(list, TABLE_NAME);
+		HBaseUtil.savePut(put, TABLE_NAME);
 		
-		HBaseToolUtil.insert(TABLE_NAME, "testrow", COL_FAMILY, "age", "35") ;
-		HBaseToolUtil.insert(TABLE_NAME, "testrow", COL_FAMILY, "cardid", "12312312335") ;
-		HBaseToolUtil.insert(TABLE_NAME, "testrow", COL_FAMILY, "tel", "13512312345") ;
+		HBaseUtil.insert(TABLE_NAME, "testrow", COL_FAMILY, "age", "35") ;
+		HBaseUtil.insert(TABLE_NAME, "testrow", COL_FAMILY, "cardid", "12312312335") ;
+		HBaseUtil.insert(TABLE_NAME, "testrow", COL_FAMILY, "tel", "13512312345") ;
 		
-		HBaseToolUtil.insert(TABLE_NAME, "2014-01-01", COL_FAMILY, "age", "99") ;
-		HBaseToolUtil.insert(TABLE_NAME, "2014-01-01", COL_FAMILY, "cardid", "11312312335") ;
-		HBaseToolUtil.insert(TABLE_NAME, "2014-02-01", COL_FAMILY, "tel", "11512312345") ;
+		HBaseUtil.insert(TABLE_NAME, "2014-01-01", COL_FAMILY, "age", "99") ;
+		HBaseUtil.insert(TABLE_NAME, "2014-01-01", COL_FAMILY, "cardid", "11312312335") ;
+		HBaseUtil.insert(TABLE_NAME, "2014-02-01", COL_FAMILY, "tel", "11512312345") ;
 		
-		List<Result> resultList = HBaseToolUtil.getRows(TABLE_NAME, "2014-01", COL_FAMILY, "age") ;
+		List<Result> resultList = HBaseUtil.getRows(TABLE_NAME, "2014-01", COL_FAMILY, "age") ;
 		for(Result result : resultList){
-			HBaseToolUtil.printRowRecord(result);
+			HBaseUtil.printRowRecord(result);
 		}
 		
-		Result result = HBaseToolUtil.getOneRow(TABLE_NAME, "2014-01-01");
-		HBaseToolUtil.printRowRecord(result);
+		Result result = HBaseUtil.getOneRow(TABLE_NAME, "2014-01-01");
+		HBaseUtil.printRowRecord(result);
 	}
 
 
@@ -307,7 +289,7 @@ public class HbaseTest {
 	private static void insertPhoneNumToDB() throws Exception{
 		byte[] family = COL_FAMILY.getBytes();
 		
-		List<Put> puts = new ArrayList<Put>();
+		List<Put> puts = new ArrayList<>();
 		
 		for (int i = 0; i < 100; i++) {
 			String pnum = PhoneUtils.getPhoneNum("186");
@@ -328,8 +310,8 @@ public class HbaseTest {
 				// Long.MAX_VALUE(922337^2036854775807) - 1513171565000(20171213212605)
 				// 02_18685184797_9223370523688018807
 
-				pnum = HBaseToolUtil.reverseRowkey(pnum);
-				int regionNum = HBaseToolUtil.genRegionNum(pnum, REGION_COUNT);
+				pnum = HBaseUtil.reverseRowkey(pnum);
+				int regionNum = HBaseUtil.genRegionNum(pnum, REGION_COUNT);
 				LocalDateTime dateTime = LocalDateTime.parse(datestr, DateTimeFormatter.ofPattern(YYYY_MM_DD_HH_MM_SS));
 				long milli = dateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
 
@@ -344,13 +326,13 @@ public class HbaseTest {
 			}
 			
 			if (puts.size() >= 100){
-				HBaseToolUtil.savePutList(puts, TABLE_NAME);
+				HBaseUtil.savePutList(puts, TABLE_NAME);
 				
 				puts.clear();
 			}
 			
 		}
-		HBaseToolUtil.savePutList(puts, TABLE_NAME);
+		HBaseUtil.savePutList(puts, TABLE_NAME);
 	}
 
 	
@@ -360,18 +342,18 @@ public class HbaseTest {
 		// 范围查找
 		// 起始位置
 		// 随机生成的电话号码，可能需要重新从scan 'phone'进行获取
-		int regionNum = HBaseToolUtil.genRegionNum(phoneNum, REGION_COUNT);
+		int regionNum = HBaseUtil.genRegionNum(phoneNum, REGION_COUNT);
 		String startRowKey = regionNum + "_" + phoneNum + "_" + (Long.MAX_VALUE - sdf.parse("2017" + endMonth + "01000000").getTime());
 		// 结束位置
 		String stopRowKey = regionNum + "_" + phoneNum + "_" + (Long.MAX_VALUE - sdf.parse("2017" + startMonth + "01000000").getTime());
 		
-		List<Result> results = HBaseToolUtil.getRows(TABLE_NAME, COL_FAMILY, startRowKey, stopRowKey);
+		List<Result> results = HBaseUtil.getRows(TABLE_NAME, COL_FAMILY, startRowKey, stopRowKey);
 		byte[] family = COL_FAMILY.getBytes();
 		for (Result rs : results) {
-			System.out.print(HBaseToolUtil.getColValue(rs, family, CF1_DNUM));
-			System.out.print(" - " + HBaseToolUtil.getColValue(rs, family, CF1_DATE));
-			System.out.print(" - " + HBaseToolUtil.getColValue(rs, family, CF1_TYPE.getBytes()));
-			System.out.println(" - " + HBaseToolUtil.getColValue(rs, family, CF1_LENGTH.getBytes()));
+			System.out.print(HBaseUtil.getColValue(rs, family, CF1_DNUM));
+			System.out.print(" - " + HBaseUtil.getColValue(rs, family, CF1_DATE));
+			System.out.print(" - " + HBaseUtil.getColValue(rs, family, CF1_TYPE.getBytes()));
+			System.out.println(" - " + HBaseUtil.getColValue(rs, family, CF1_LENGTH.getBytes()));
 		}
 	}
 	
@@ -390,12 +372,12 @@ public class HbaseTest {
 		//		family, "type".getBytes(), CompareOp.EQUAL, "0".getBytes());
 		//list.addFilter(filter2);
 		
-		ResultScanner rss = HBaseToolUtil.scanRowByFilterList(TABLE_NAME, list);
+		ResultScanner rss = HBaseUtil.scanRowByFilterList(TABLE_NAME, list);
 		for (Result rs : rss) {
-			System.out.print(HBaseToolUtil.getColValue(rs, family, CF1_DNUM.getBytes()));
-			System.out.print(" - " + HBaseToolUtil.getColValue(rs, family, CF1_DATE.getBytes()));
-			System.out.print(" - " + HBaseToolUtil.getColValue(rs, family, CF1_TYPE.getBytes()));
-			System.out.println(" - " + HBaseToolUtil.getColValue(rs, family, CF1_LENGTH.getBytes()));
+			System.out.print(HBaseUtil.getColValue(rs, family, CF1_DNUM.getBytes()));
+			System.out.print(" - " + HBaseUtil.getColValue(rs, family, CF1_DATE.getBytes()));
+			System.out.print(" - " + HBaseUtil.getColValue(rs, family, CF1_TYPE.getBytes()));
+			System.out.println(" - " + HBaseUtil.getColValue(rs, family, CF1_LENGTH.getBytes()));
 		}
 	}
 }

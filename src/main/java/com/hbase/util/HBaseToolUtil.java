@@ -244,7 +244,7 @@ public class HBaseToolUtil {
     /**
 	 * 查询表中的数据
 	 */
-	public static void getTableRowCount(String tableName)
+	public static int getTableRowCount(String tableName)
 			throws IOException {
 		System.out.println("--------------------查询整表的行的数量--------");
 
@@ -261,6 +261,7 @@ public class HBaseToolUtil {
 			rowCount += result.size();
 		}
 		System.out.println("---------------查询整表数据结束----------Count:" + rowCount);
+		return rowCount;
 	}
 	
 	
@@ -336,11 +337,14 @@ public class HBaseToolUtil {
 	 * @param tableName 表名
 	 */
 	public static void savePutList(List<Put> putList, String tableName) {
-		
+		if (putList.size() <= 0){
+			return;
+		}
+
 		Table table = HbaseConnHelper.getTable(tableName);
 		try {
 			table.put(putList) ;
-			System.out.println(Thread.currentThread().getName() + " 时间：" + LocalDateTime.now().getSecond() +  " 成功插入数据到hbase:" + putList.size() + " 条");
+			System.out.println("时间：" + LocalDateTime.now() + " 线程：" + Thread.currentThread().getName() + " 成功插入数据到hbase:" + putList.size() + " 条");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
