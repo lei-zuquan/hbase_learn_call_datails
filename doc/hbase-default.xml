@@ -641,7 +641,9 @@
             won't be sent to this region until some writes finishes.  
         </description>  
     </property>  
-    <!-- 在执行hbase scan操作的时候，客户端缓存的行数，设置小意味着更多的rpc次数，设置大比较吃内存 -->  
+    <!-- 在执行hbase scan操作的时候，客户端缓存的行数，设置小意味着更多的rpc次数，设置大比较吃内存。单位：缓存的条数
+        缓存固然好，但是带来的危害就是会占用大量内存，最糟糕的就是 直接出现OutOfMemoryException，所以也不要盲目的调大缓存。
+    -->
     <property>  
         <name>hbase.client.scanner.caching</name>  
         <value>2147483647</value>  
