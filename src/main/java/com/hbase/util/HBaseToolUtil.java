@@ -261,6 +261,7 @@ public class HBaseToolUtil {
 			rowCount += result.size();
 		}
 		System.out.println("---------------查询整表数据结束----------Count:" + rowCount);
+		scanner.close();
 		return rowCount;
 	}
 	
@@ -436,19 +437,24 @@ public class HBaseToolUtil {
 	public static List<Result> getRows(String tableName, String rowKeyLike) {
 		
 		List<Result> list = null;
+		ResultScanner scanner = null;
 		Table table = HbaseConnHelper.getTable(tableName); 
 		try {
 			PrefixFilter filter = new PrefixFilter(rowKeyLike.getBytes());
 			Scan scan = new Scan();
 			scan.setFilter(filter);
-			ResultScanner scanner = table.getScanner(scan);
+			scanner = table.getScanner(scan);
 			list = new ArrayList<Result>();
 			for (Result rs : scanner) {
 				list.add(rs);
 			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			if (scanner != null) {
+				scanner.close();
+			}
 			HbaseConnHelper.closeTable(table);
 		}
 		return list;
@@ -464,6 +470,7 @@ public class HBaseToolUtil {
 	public static List<Result> getRows(String tableName, String rowKeyLike, String family, String cols[]) {
 		
 		List<Result> list = null;
+		ResultScanner scanner = null;
 		Table table = HbaseConnHelper.getTable(tableName);
 		try {
 			PrefixFilter filter = new PrefixFilter(rowKeyLike.getBytes());
@@ -473,7 +480,7 @@ public class HBaseToolUtil {
 				scan.addColumn(family.getBytes(), cols[i].getBytes());
 			}
 			scan.setFilter(filter);
-			ResultScanner scanner = table.getScanner(scan);
+			scanner = table.getScanner(scan);
 			list = new ArrayList<Result>();
 			for (Result rs : scanner) {
 				list.add(rs);
@@ -481,6 +488,9 @@ public class HBaseToolUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			if (scanner != null) {
+				scanner.close();
+			}
 			HbaseConnHelper.closeTable(table);
 		}
 		return list;
@@ -497,6 +507,7 @@ public class HBaseToolUtil {
 	public static List<Result> getRows(String tableName, String family, String startRow,String stopRow){
 
 		List<Result> list = null;
+		ResultScanner scanner = null;
 		Table table = HbaseConnHelper.getTable(tableName);
 
 		try {
@@ -504,7 +515,7 @@ public class HBaseToolUtil {
 			scan.addFamily(Bytes.toBytes(family));
 			scan.setStartRow(Bytes.toBytes(startRow));
 			scan.setStopRow(Bytes.toBytes(stopRow));
-			ResultScanner scanner = table.getScanner(scan);
+			scanner = table.getScanner(scan);
 			list = new ArrayList<Result>();
 			for (Result rsResult : scanner) {
 				list.add(rsResult);
@@ -513,6 +524,9 @@ public class HBaseToolUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			if (scanner != null){
+				scanner.close();
+			}
 			try {
 				table.close();
 			} catch (IOException e) {
@@ -555,13 +569,13 @@ public class HBaseToolUtil {
 	 * @param rowKeyLike	rowKey规则
 	 */
 	public static void deleteRecordsByRowKeyLike(String tableName, String rowKeyLike){
-		
+		ResultScanner scanner = null;
 		Table table = HbaseConnHelper.getTable(tableName);
 		try {
 			PrefixFilter filter = new PrefixFilter(rowKeyLike.getBytes());
 			Scan scan = new Scan();
 			scan.setFilter(filter);
-			ResultScanner scanner = table.getScanner(scan);
+			scanner = table.getScanner(scan);
 			List<Delete> list = new ArrayList<Delete>();
 			for (Result rs : scanner) {
 				Delete del = new Delete(rs.getRow());
@@ -571,6 +585,9 @@ public class HBaseToolUtil {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
+			if (scanner != null){
+				scanner.close();
+			}
 			HbaseConnHelper.closeTable(table);
 		}
 	}

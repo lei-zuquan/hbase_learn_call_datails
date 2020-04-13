@@ -244,6 +244,7 @@ public class HBaseUtil {
             rowCount += result.size();
         }
         System.out.println("---------------查询整表数据结束----------Count:" + rowCount);
+        scanner.close();
         return rowCount;
     }
 
@@ -529,12 +530,13 @@ public class HBaseUtil {
     public static List<Result> getRows(String tableName, String rowKeyLike) {
 
         List<Result> list = null;
+        ResultScanner scanner = null;
         Table table = getTable(tableName);
         try {
             PrefixFilter filter = new PrefixFilter(rowKeyLike.getBytes());
             Scan scan = new Scan();
             scan.setFilter(filter);
-            ResultScanner scanner = table.getScanner(scan);
+            scanner = table.getScanner(scan);
             list = new ArrayList<Result>();
             for (Result rs : scanner) {
                 list.add(rs);
@@ -542,6 +544,9 @@ public class HBaseUtil {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (scanner != null){
+                scanner.close();
+            }
             closeTable(table);
         }
         return list;
@@ -557,6 +562,7 @@ public class HBaseUtil {
     public static List<Result> getRows(String tableName, String rowKeyLike, String family, String cols[]) {
 
         List<Result> list = null;
+        ResultScanner scanner = null;
         Table table = getTable(tableName);
         try {
             PrefixFilter filter = new PrefixFilter(rowKeyLike.getBytes());
@@ -566,7 +572,7 @@ public class HBaseUtil {
                 scan.addColumn(family.getBytes(), cols[i].getBytes());
             }
             scan.setFilter(filter);
-            ResultScanner scanner = table.getScanner(scan);
+            scanner = table.getScanner(scan);
             list = new ArrayList<>();
             for (Result rs : scanner) {
                 list.add(rs);
@@ -574,6 +580,9 @@ public class HBaseUtil {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (scanner != null){
+                scanner.close();
+            }
             closeTable(table);
         }
         return list;
@@ -590,6 +599,7 @@ public class HBaseUtil {
     public static List<Result> getRows(String tableName, String family, String startRow,String stopRow){
 
         List<Result> list = null;
+        ResultScanner scanner = null;
         Table table = getTable(tableName);
 
         try {
@@ -597,7 +607,7 @@ public class HBaseUtil {
             scan.addFamily(Bytes.toBytes(family));
             scan.setStartRow(Bytes.toBytes(startRow));
             scan.setStopRow(Bytes.toBytes(stopRow));
-            ResultScanner scanner = table.getScanner(scan);
+            scanner = table.getScanner(scan);
             list = new ArrayList<>();
             for (Result rsResult : scanner) {
                 list.add(rsResult);
@@ -606,6 +616,9 @@ public class HBaseUtil {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (scanner != null){
+                scanner.close();
+            }
             try {
                 table.close();
             } catch (IOException e) {
@@ -649,12 +662,13 @@ public class HBaseUtil {
      */
     public static void deleteRecordsByRowKeyLike(String tableName, String rowKeyLike){
 
+        ResultScanner scanner = null;
         Table table = getTable(tableName);
         try {
             PrefixFilter filter = new PrefixFilter(rowKeyLike.getBytes());
             Scan scan = new Scan();
             scan.setFilter(filter);
-            ResultScanner scanner = table.getScanner(scan);
+            scanner = table.getScanner(scan);
             List<Delete> list = new ArrayList<>();
             for (Result rs : scanner) {
                 Delete del = new Delete(rs.getRow());
@@ -664,6 +678,9 @@ public class HBaseUtil {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (scanner != null){
+                scanner.close();
+            }
             closeTable(table);
         }
     }

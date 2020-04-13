@@ -11,6 +11,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -421,5 +422,6 @@ public class HBaseToolUtilTest {
 			System.out.print(" - " + com.hbase.util.HBaseToolUtil.getColValue(rs, family, CF1_TYPE.getBytes()));
 			System.out.println(" - " + com.hbase.util.HBaseToolUtil.getColValue(rs, family, CF1_LENGTH.getBytes()));
 		}
+		rss.close();
 	}
 }
