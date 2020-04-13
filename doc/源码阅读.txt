@@ -252,9 +252,80 @@ doMiniBatchMutation
 
 
 
+重点8：面向高并发写入优化
+        优化点：
+            保证负载均衡
+            保证写入顺畅
+            防止小文件过多
+            减少不必要的磁盘和网络IO
+        预分区：
+            参考 "数据怎么存"
+            预分region
+            禁用split region
+            时间戳为key或前缀时，加入额外的分片前缀
+            扫描和读取时每个分片都需要进行一次
+        wal禁用或延迟
+            setDurability(Durability d)
+            Durability是wal延迟类型枚举类
+            有丢失数据可能
+            表属性DEFERRED_LOG_FLUSH (@Deprecated) 和DURABILITY
+
+    ===================================================
+    增大memstroe阻塞写入阈值
+        新版本：hbase.regionserver.global.memstore.size
+        旧版本：hbase.regionserver.global.memstore.upperLimit
+        降低写入阻塞风险
+    增大hbase.hstore.blockingStoreFiles
+        降低写入阻塞风险
+    增大memstore flush阈值
+        新版本：hbase.regionserver.global.memstore.size.lower.limit
+        旧版本：hbase.regionserver.global.memstore.lowerLimit
+        增大单次flush出的文件大小
+    减少文件数
+        小步快倒————降低compaction最小文件数限制、适当提高最大文件数限制
+            单次参与文件少
+            hbase.hstore.compaction.min
+            hbase.hstore.compaction.max
+            防止频繁写入导致flush频繁，进而导致文件数过多
+        大步慢走————提高compaction最小文件数限制、进一步提高最大文件数限制
+            加大单次compaction文件参与数量
+        多个region同在一个region server时，提高线程数
+            hbase.regionserver.thread.compaction.large
+            hbase.regionserver.thread.compaction.small
+            hbase.regionserver.thread.compaction.throttle
+
+面向高并发随机读优化
+    使用布隆过滤
+    防止发生full gc
+        防止内存紧张
+        合理调整jvm参数
+    增大blockcache
+        增加缓存
+        hfile.block.cache.size
+    使用bucketcache
+        使用ssd磁盘作为二级缓存
+        0.98开始支持
+    减少BLOCKSIZE
+        减少data block中的数据
+        增加索引，减少平均查找长度
+        降低缓存置换成本
+        减少特理层读放大
 
 
-
+合理控制region数量
+    合理分担scan、get、put到每个region server
+        对于一个表每个region server上的region数过多无益
+        每个region中的数据量最好近似
+        region数合理后禁用用split region
+            将 MAX_FILESIZE调整为较大值
+        合理预分region
+            使用hbase shell中的 NUMREGIONS 与 SPLITALGO
+            更加灵活可使用HBaseAdmin.createTable(HTableDescripter, byte[][])
+                第二个参数指定分割region的split key
+            最好一步到位，预分后禁用split region
+            推荐
+                考虑合理的集群扩展
+                每个region server 5个region
 
 
 
