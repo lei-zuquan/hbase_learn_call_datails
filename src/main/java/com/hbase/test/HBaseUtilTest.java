@@ -11,6 +11,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -128,9 +129,11 @@ public class HBaseUtilTest {
 		HBaseUtil.savePutList(puts, TABLE_NAME);
 	}
 
-	private static void singleThreadDoHbase() throws Exception{
+	@Test
+	public void singleThreadDoHbase() throws Exception{
 		LocalDateTime startTime = LocalDateTime.now();
 
+		HBaseUtil.makeHbaseConnection();
 		// 插入测试数据，这里不建议使用insertToDB1接口
 		HBaseUtil.truncateTable(TABLE_NAME);
 
@@ -178,26 +181,24 @@ public class HBaseUtilTest {
 		}
 
 		showSpendTime(startTime);
-//		startTime = LocalDateTime.now();
-//
-//		scanPhoneRecord("18695907472", "10", "11");
-//
-//		showSpendTime(startTime);
-//		startTime = LocalDateTime.now();
-//
-//		System.out.println("============================00");
-//
-//		scanDBPhoneNumByFilter("18699967612");
-//
-//		showSpendTime(startTime);
-//		startTime = LocalDateTime.now();
-//
-//
+		startTime = LocalDateTime.now();
+
+		scanPhoneRecord("18695907472", "10", "11");
+
+		showSpendTime(startTime);
+		startTime = LocalDateTime.now();
+
+		System.out.println("============================00");
+
+		scanDBPhoneNumByFilter("18699967612");
+
+		showSpendTime(startTime);
+
 		HBaseUtil.flush(TABLE_NAME);
 
-//		HbaseConnHelper.closeConnection();
-//
-//		testRowKeyLength();
+		HbaseConnHelper.closeConnection();
+
+		testRowKeyLength();
 	}
 	
 	private static void showSpendTime(LocalDateTime startTime){
@@ -310,7 +311,7 @@ public class HBaseUtilTest {
 				// Long.MAX_VALUE(922337^2036854775807) - 1513171565000(20171213212605)
 				// 02_18685184797_9223370523688018807
 
-				pnum = HBaseUtil.reverseRowkey(pnum);
+				//pnum = HBaseUtil.reverseRowkey(pnum);
 				int regionNum = HBaseUtil.genRegionNum(pnum, REGION_COUNT);
 				LocalDateTime dateTime = LocalDateTime.parse(datestr, DateTimeFormatter.ofPattern(YYYY_MM_DD_HH_MM_SS));
 				long milli = dateTime.toInstant(ZoneOffset.of("+8")).toEpochMilli();
@@ -324,14 +325,8 @@ public class HBaseUtilTest {
 				
 				puts.add(put);
 			}
-			
-			if (puts.size() >= 100){
-				HBaseUtil.savePutList(puts, TABLE_NAME);
-				
-				puts.clear();
-			}
-			
 		}
+
 		HBaseUtil.savePutList(puts, TABLE_NAME);
 	}
 
