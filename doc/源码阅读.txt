@@ -101,7 +101,7 @@ doMiniBatchMutation
     * 一个线程可以同时在同一行上获取多个锁。
     * 必须通过从同一线程调用release（）来释放锁。
     * /
-    RowLock rowLock = null; // HBase只支持行级锁
+    RowLock rowLock = null; // HBase只支持行级锁，不支持事务。只支持单行单次操作的事务
 
     // STEP 1. Try to acquire as many locks as we can, and ensure we acquire at least one.
             //步骤1.尝试获取尽可能多的锁，并确保至少获取一个。
