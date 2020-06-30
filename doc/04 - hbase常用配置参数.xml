@@ -4,8 +4,8 @@
         <description>The port the HBase Master should bind to.</description>  
     </property>  
     <!-- regionServer的全局memstore的大小，超过该大小会触发flush到磁盘的操作,默认是堆大小的40%,而且regionserver级别的   
-        flush会阻塞客户端读写 -->  
-    <property>  
+        flush会阻塞客户端读写 -->
+    <property>
         <name>hbase.regionserver.global.memstore.size</name>  
         <value></value>  
         <description>Maximum size of all memstores in a region server before  
