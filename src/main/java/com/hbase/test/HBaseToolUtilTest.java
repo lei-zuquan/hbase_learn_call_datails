@@ -11,7 +11,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -71,7 +70,7 @@ public class HBaseToolUtilTest {
 
 	private static void multiThreadDoHbaseByHBaseToolUtil() throws Exception{
 		int startNo = 11;
-		int threadCount = 20 + startNo;
+		int threadCount = 4 + startNo;
 
 		Vector<Thread> threadVector = new Vector<>();
 		for (int i = startNo; i < threadCount; i++) {
@@ -81,7 +80,7 @@ public class HBaseToolUtilTest {
 			childThread.start();
 		}
 
-		// 需要等待上面20个线程都全部计算完成后，再用main线程取得最终的结果值看是多少？
+		// 需要等待上面所有个程都全部计算完成后，再用main线程取得最终的结果值看是多少？
 		for (Thread thread: threadVector){
 			thread.join();
 		}

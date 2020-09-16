@@ -41,10 +41,11 @@ public class HbaseConnHelper {
 		 * 方式二：
 		 * 		hbase-default.xml,hbase-site.xml
 		 */
-		String zk_list = "node-03,node-01,node-02";
+		String zk_list = "js003.bigdata.com,js002.bigdata.com,js001.bigdata.com";
 		conf.set("hbase.zookeeper.quorum", zk_list);
 		// 设置连接参数:hbase数据库使用的接口
 		conf.set("hbase.zookeeper.property.clientPort", "2181");
+		conf.set("zookeeper.znode.parent", "/hbase-unsecure");
 
 		//conf.set("fs.hdfs.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
 		//conf.set("fs.file.impl", "org.apache.hadoop.fs.LocalFileSystem");
